@@ -6,6 +6,9 @@ const usuario = new Usuarios()
 
 io.on('connection', (client) => {
     
+    
+
+
     client.on('enetrarChat', (data, callback) =>{
         if(!data.nombre || !data.sala){
             callback({
@@ -16,21 +19,24 @@ io.on('connection', (client) => {
         client.join(data.sala)
         const personas = usuario.agregarPersona(client.id, data.nombre, data.sala)
         client.broadcast.to(data.sala).emit('listaDePersonas', usuario.getPersonasPorSala(data.sala))
-        callback(personas)  
+        client.broadcast.to(data.sala).emit('crearMensaje', crearMensaje('Admin', `${data.nombre} se unió`))
+        callback(usuario.getPersonasPorSala(data.sala))  
     })
 
     client.on('disconnect', () =>{
 
         const persona = usuario.borrarPersona(client.id)
 
-        client.broadcast.to(persona.sala).emit('listaDePersonas', usuario.getPersonas())
-        client.broadcast.to(persona.sala).emit('crearMensaje', crearMensaje('Administrador', `${persona.nombre} salió`))
+        client.broadcast.to(persona.sala).emit('listaDePersonas', usuario.getPersonasPorSala(persona.sala))
+        client.broadcast.to(persona.sala).emit('crearMensaje', crearMensaje('Admin', `${persona.nombre} salió`))
 
     })
 
-    client.on('crearMensaje', (data) =>{
+    client.on('crearMensaje', (data, callback) =>{
         const persona = usuario.getPersona(client.id)
-        client.broadcast.to(persona.sala).emit('crearMensaje', crearMensaje(persona.nombre, data.mensaje))
+        const mensaje = crearMensaje(persona.nombre, data.mensaje)
+        client.broadcast.to(persona.sala).emit('crearMensaje', mensaje)
+        callback(mensaje)
     })
 
     client.on('mensajePrivado', (data) =>{
